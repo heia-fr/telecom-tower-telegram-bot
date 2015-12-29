@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	maxMsgLen = 42 // The tower can show up to 21 characters (using 6x8 font).
+	maxMsgLen = 64 // The tower can show up to 21 characters (using 6x8 font).
 )
 
 var colorKeyboard = telebot.SendOptions{
