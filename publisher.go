@@ -71,5 +71,20 @@ func (s *session) publishMessage(text string) {
 		Conclusion:   []Line{Line{Text: " // ", Font: 6, Color: "#0000FF"}},
 		Separator:    []Line{Line{Text: "  --  ", Font: 6, Color: "#FFFFFF"}},
 	}
+
+	if s.anonymous {
+		towerMessage.Body = []Line{
+			Line{Text: text, Font: 6, Color: s.color},
+		}
+	} else {
+		towerMessage.Body = []Line{
+			Line{
+				Text: fmt.Sprintf("%s says: ", s.sender.FirstName),
+				Font: 6, Color: "#FFFFFF"},
+			Line{
+				Text: text, Font: 6, Color: s.color},
+		}
+	}
+
 	natsConn.Publish(natsSubject, towerMessage)
 }

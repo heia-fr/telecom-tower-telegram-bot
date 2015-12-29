@@ -33,6 +33,7 @@ import (
 type session struct {
 	state        stateFn
 	color        string
+	anonymous    bool
 	conversation telebot.Chat
 	sender       telebot.User
 	lastMessage  telebot.Message

@@ -26,16 +26,18 @@ import (
 )
 
 const (
-	printCommand  = "/print"
-	cancelCommand = "/cancel"
+	printCommand          = "/print"
+	anonymousPrintCommand = "/xprint"
+	cancelCommand         = "/cancel"
 )
 
 type stateFn func(*session)
 
 func idleState(s *session) {
-	if s.lastMessage.Text == printCommand {
+	if s.lastMessage.Text == printCommand || s.lastMessage.Text == anonymousPrintCommand {
 		s.sayHello()
 		s.state = checkColorState
+		s.anonymous = s.lastMessage.Text == anonymousPrintCommand
 	}
 }
 
