@@ -21,6 +21,8 @@
 package main
 
 import (
+	"fmt"
+	"github.com/tucnak/telebot"
 	"log"
 	"strings"
 )
@@ -68,6 +70,15 @@ func checkTextState(s *session) {
 			"%s %s (%s) says : \"%s\" in %s",
 			s.sender.FirstName, s.sender.LastName, s.sender.Username,
 			s.lastMessage.Text, s.color)
+		// Send a notificatin to admins.
+		for _, name := range admins {
+			bot.SendMessage(telebot.Chat{Username: name},
+				fmt.Sprintf(
+					"%s %s (%s) says : \"%s\"",
+					s.sender.FirstName, s.sender.LastName, s.sender.Username,
+					s.lastMessage.Text),
+				nil)
+		}
 		s.sayGoodText()
 		s.publishMessage(s.lastMessage.Text)
 		s.state = idleState

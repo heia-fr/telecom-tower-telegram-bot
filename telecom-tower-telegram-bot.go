@@ -43,6 +43,8 @@ const (
 	longPollTime = 300 * time.Second
 )
 
+var admins = [...]string{"J4cqu35"}
+
 var bot *telebot.Bot
 var sessions = make(map[string]*session) // the key is the telegram chat ID and the user ID
 
