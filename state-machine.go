@@ -70,14 +70,15 @@ func checkTextState(s *session) {
 			"%s %s (%s) says : \"%s\" in %s",
 			s.sender.FirstName, s.sender.LastName, s.sender.Username,
 			s.lastMessage.Text, s.color)
-		// Send a notificatin to admins.
-		for _, name := range admins {
-			bot.SendMessage(telebot.Chat{Username: name},
-				fmt.Sprintf(
-					"%s %s (%s) says : \"%s\"",
-					s.sender.FirstName, s.sender.LastName, s.sender.Username,
-					s.lastMessage.Text),
+		// Send a notification to channels
+		for _, username := range notificationChannels {
+			err := bot.SendMessage(
+				telebot.Chat{Type: "channel", Username: username},
+				fmt.Sprintf("%s says : \"%s\"", s.sender.FirstName, s.lastMessage.Text),
 				nil)
+			if err != nil {
+				log.Println(err)
+			}
 		}
 		s.sayGoodText()
 		s.publishMessage(s.lastMessage.Text)
