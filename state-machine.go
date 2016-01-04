@@ -1,4 +1,4 @@
-// Copyright 2015 Jacques Supcik, HEIA-FR
+// Copyright 2016 Jacques Supcik, HEIA-FR
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 // limitations under the License.
 
 // 2015-12-29 | JS | First version
+// 2016-01-04 | JS | Last change
 
 //
 // Telegram bot
@@ -67,8 +68,8 @@ func checkTextState(s *session) {
 	}
 	if len(s.lastMessage.Text) <= maxMsgLen {
 		log.Printf(
-			"%s %s (%s) says : \"%s\" in %s",
-			s.sender.FirstName, s.sender.LastName, s.sender.Username,
+			"%s %s (%s/%d) says : \"%s\" in %s",
+			s.sender.FirstName, s.sender.LastName, s.sender.Username, s.sender.ID,
 			s.lastMessage.Text, s.color)
 		// Send a notification to channels
 		for _, username := range notificationChannels {
@@ -77,7 +78,7 @@ func checkTextState(s *session) {
 				fmt.Sprintf("%s says : \"%s\"", s.sender.FirstName, s.lastMessage.Text),
 				nil)
 			if err != nil {
-				log.Println(err)
+				log.Printf("Error sending notification: %s\n", err)
 			}
 		}
 		s.sayGoodText()
