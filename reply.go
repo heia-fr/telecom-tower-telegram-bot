@@ -1,4 +1,4 @@
-// Copyright 2015 Jacques Supcik, HEIA-FR
+// Copyright 2016 Jacques Supcik, HEIA-FR
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 // limitations under the License.
 
 // 2015-12-29 | JS | First version
+// 2016-01-12 | JS | Last version (add status command)
 
 //
 // Telegram bot
@@ -62,6 +63,10 @@ func (s *session) sayHello() {
 			"Hello %s, nice to see you. Please, enter the color for your message.",
 			s.sender.FirstName),
 		&colorKeyboard)
+}
+
+func (s *session) sayStatus() {
+	bot.SendMessage(s.conversation, lastMessage, &hideKeyboard)
 }
 
 func (s *session) sayCanceled() {

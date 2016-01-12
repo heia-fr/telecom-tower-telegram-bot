@@ -32,7 +32,10 @@ const (
 	printCommand          = "/print"
 	anonymousPrintCommand = "/xprint"
 	cancelCommand         = "/cancel"
+	statusCommand         = "/status"
 )
+
+var lastMessage string = "(no message)"
 
 type stateFn func(*session)
 
@@ -41,6 +44,8 @@ func idleState(s *session) {
 		s.sayHello()
 		s.state = checkColorState
 		s.anonymous = s.lastMessage.Text == anonymousPrintCommand
+	} else if s.lastMessage.Text == statusCommand {
+		s.sayStatus()
 	}
 }
 
@@ -71,6 +76,7 @@ func checkTextState(s *session) {
 			"%s %s (%s/%d) says : \"%s\" in %s",
 			s.sender.FirstName, s.sender.LastName, s.sender.Username, s.sender.ID,
 			s.lastMessage.Text, s.color)
+		lastMessage = fmt.Sprintf("%s says : \"%s\"", s.sender.FirstName, s.lastMessage.Text)
 		// Send a notification to channels
 		for _, username := range notificationChannels {
 			err := bot.SendMessage(
