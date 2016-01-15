@@ -53,7 +53,7 @@ type session struct {
 	anonymous    bool
 	conversation telebot.Chat
 	sender       telebot.User
-	lastMessage  telebot.Message
+	message      telebot.Message
 }
 
 const (
@@ -68,7 +68,15 @@ var sessions = make(map[string]*session) // the key is the telegram chat ID and 
 func main() {
 	var token = flag.String("telegram-token", "", "Telegram Token")
 	var natsUrl = flag.String("nats-url", nats.DefaultURL, "NATS URL")
-	var natsSubject = flag.String("nats-subject", "heiafr.telecomtower.bot", "NATS Subject")
+	var natsPublishSubject = flag.String(
+		"nats-pub-subject",
+		"heiafr.telecomtower.bot",
+		"NATS Publish Subject")
+	var natsQuerySubject = flag.String(
+		"nats-query-subject",
+		"heiafr.telecomtower.bot.query",
+		"NATS Query Subject")
+
 	iniflags.Parse()
 
 	var err error
@@ -80,7 +88,7 @@ func main() {
 	messages := make(chan telebot.Message)
 	bot.Listen(messages, longPollTime)
 
-	initPublisher(*natsUrl, *natsSubject)
+	natsGw.init(*natsUrl, *natsPublishSubject, *natsQuerySubject)
 
 	for message := range messages {
 		key := fmt.Sprintf("%x:%x", message.Chat.ID, message.Sender.ID)
@@ -92,7 +100,7 @@ func main() {
 			currentSession.sender = message.Sender
 			sessions[key] = currentSession
 		}
-		currentSession.lastMessage = message
+		currentSession.message = message
 		currentSession.state(currentSession)
 	}
 

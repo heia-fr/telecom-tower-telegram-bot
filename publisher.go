@@ -38,35 +38,55 @@ type RollingMessage struct {
 	Separator    []Line
 }
 
-var natsConn *nats.EncodedConn
-var natsSubject string
-
-func initPublisher(url string, subject string) {
-	nc, _ := nats.Connect(url)
-	natsConn, _ = nats.NewEncodedConn(nc, nats.JSON_ENCODER)
-	natsSubject = subject
+type natsGateway struct {
+	conn         *nats.EncodedConn
+	pubSubject   string
+	towerMessage RollingMessage
 }
 
-func (s *session) publishMessage(text string) {
-	towerMessage := RollingMessage{
+var natsGw natsGateway
+
+func (ng natsGateway) init(url string, pubSubject string, qSubject string) {
+	nc, _ := nats.Connect(url)
+	ng.conn, _ = nats.NewEncodedConn(nc, nats.JSON_ENCODER)
+	ng.pubSubject = pubSubject
+
+	ng.conn.Subscribe(qSubject, func(subj, reply string, msg string) {
+		ng.conn.Publish(reply, ng.towerMessage)
+	})
+}
+
+func (ng natsGateway) publishMessage(s *session) {
+	ng.towerMessage = RollingMessage{
 		Introduction: []Line{Line{Text: "", Font: 6, Color: "#000000"}},
 		Conclusion:   []Line{Line{Text: " // ", Font: 6, Color: "#0000FF"}},
 		Separator:    []Line{Line{Text: "  --  ", Font: 6, Color: "#FFFFFF"}},
 	}
 
 	if s.anonymous {
-		towerMessage.Body = []Line{
-			Line{Text: text, Font: 6, Color: s.color},
+		ng.towerMessage.Body = []Line{
+			Line{Text: s.message.Text, Font: 6, Color: s.color},
 		}
 	} else {
-		towerMessage.Body = []Line{
+		ng.towerMessage.Body = []Line{
 			Line{
 				Text: fmt.Sprintf("%s says: ", s.sender.FirstName),
 				Font: 6, Color: "#FFFFFF"},
 			Line{
-				Text: text, Font: 6, Color: s.color},
+				Text: s.message.Text, Font: 6, Color: s.color},
 		}
 	}
 
-	natsConn.Publish(natsSubject, towerMessage)
+	ng.conn.Publish(ng.pubSubject, ng.towerMessage)
+}
+
+func init() {
+	natsGw.towerMessage = RollingMessage{
+		Body: []Line{Line{
+			Text: "Telecom Tower © 2016 HEIA-FR",
+			Font: 6, Color: "#FFA500"}},
+		Introduction: []Line{Line{Text: "", Font: 6, Color: "#000000"}},
+		Conclusion:   []Line{Line{Text: " // ", Font: 6, Color: "#0000FF"}},
+		Separator:    []Line{Line{Text: "  --  ", Font: 6, Color: "#FFFFFF"}},
+	}
 }

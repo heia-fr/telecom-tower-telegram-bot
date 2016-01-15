@@ -40,22 +40,22 @@ var lastMessage string = "(no message)"
 type stateFn func(*session)
 
 func idleState(s *session) {
-	if s.lastMessage.Text == printCommand || s.lastMessage.Text == anonymousPrintCommand {
+	if s.message.Text == printCommand || s.message.Text == anonymousPrintCommand {
 		s.sayHello()
 		s.state = checkColorState
-		s.anonymous = s.lastMessage.Text == anonymousPrintCommand
-	} else if s.lastMessage.Text == statusCommand {
+		s.anonymous = s.message.Text == anonymousPrintCommand
+	} else if s.message.Text == statusCommand {
 		s.sayStatus()
 	}
 }
 
 func checkColorState(s *session) {
-	if s.lastMessage.Text == cancelCommand {
+	if s.message.Text == cancelCommand {
 		s.sayCanceled()
 		s.state = idleState
 		return
 	}
-	color, ok := colorNames[strings.ToLower(s.lastMessage.Text)]
+	color, ok := colorNames[strings.ToLower(s.message.Text)]
 	if ok {
 		s.sayGoodColor()
 		s.color = color
@@ -66,29 +66,29 @@ func checkColorState(s *session) {
 }
 
 func checkTextState(s *session) {
-	if s.lastMessage.Text == cancelCommand {
+	if s.message.Text == cancelCommand {
 		s.sayCanceled()
 		s.state = idleState
 		return
 	}
-	if len(s.lastMessage.Text) <= maxMsgLen {
+	if len(s.message.Text) <= maxMsgLen {
 		log.Printf(
 			"%s %s (%s/%d) says : \"%s\" in %s",
 			s.sender.FirstName, s.sender.LastName, s.sender.Username, s.sender.ID,
-			s.lastMessage.Text, s.color)
-		lastMessage = fmt.Sprintf("%s says : \"%s\"", s.sender.FirstName, s.lastMessage.Text)
+			s.message.Text, s.color)
+		lastMessage = fmt.Sprintf("%s says : \"%s\"", s.sender.FirstName, s.message.Text)
 		// Send a notification to channels
 		for _, username := range notificationChannels {
 			err := bot.SendMessage(
 				telebot.Chat{Type: "channel", Username: username},
-				fmt.Sprintf("%s says : \"%s\"", s.sender.FirstName, s.lastMessage.Text),
+				fmt.Sprintf("%s says : \"%s\"", s.sender.FirstName, s.message.Text),
 				nil)
 			if err != nil {
 				log.Printf("Error sending notification: %s\n", err)
 			}
 		}
 		s.sayGoodText()
-		s.publishMessage(s.lastMessage.Text)
+		natsGw.publishMessage(s)
 		s.state = idleState
 	} else {
 		s.sayTooLongText()
