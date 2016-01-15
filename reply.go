@@ -35,6 +35,7 @@ var colorKeyboard = telebot.SendOptions{
 		CustomKeyboard: [][]string{
 			[]string{"Red", "SkyBlue"},
 			[]string{"Green", "Orange"},
+			[]string{"Gold", "HotPink"},
 		},
 		OneTimeKeyboard: true,
 	},
