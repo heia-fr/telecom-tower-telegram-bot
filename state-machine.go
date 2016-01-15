@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // 2015-12-29 | JS | First version
-// 2016-01-04 | JS | Last change
+// 2016-01-12 | JS | Last change
 
 //
 // Telegram bot

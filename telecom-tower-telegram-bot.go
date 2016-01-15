@@ -15,6 +15,22 @@
 // 2015-12-29 | JS | First version
 // 2016-01-12 | JS | Last edit
 
+// Infos for BotFather
+/*
+
+/setcommands
+print  - print message on tower
+cancel - cancel current operation
+status - display current message
+
+/setdescription
+This bot displays your message on the LED display of the telecom tower of the "Haute école d'ingénierie et d'architecture Fribourg"
+Source code available on github: https://github.com/heia-fr/telecom-tower-telegram-bot
+
+/setabouttext
+By Jacques Supcik - Haute école d'ingénierie et d'architecture Fribourg - Filière télécommunications
+*/
+
 //
 // Telegram bot
 //
