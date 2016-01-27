@@ -39,11 +39,16 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
+	"github.com/heia-fr/telecom-tower/rollrenderer"
 	"github.com/nats-io/nats"
 	"github.com/tucnak/telebot"
 	"github.com/vharitonsky/iniflags"
+	"io"
 	"log"
+	"net/http"
+	"os"
 	"time"
 )
 
@@ -65,43 +70,82 @@ var notificationChannels = [...]string{"telecom_tower_notifications"}
 var bot *telebot.Bot
 var sessions = make(map[string]*session) // the key is the telegram chat ID and the user ID
 
+func home(w http.ResponseWriter, r *http.Request) {
+	f, _ := os.Open("./html/index.html")
+	io.Copy(w, f)
+}
+
+func stream(w http.ResponseWriter, r *http.Request) {
+	var upgrader = websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+	}
+
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	// readloop, just ignore all incoming websocket messages
+	go func(c *websocket.Conn) {
+		for {
+			if _, _, err := c.NextReader(); err != nil {
+				c.Close()
+				break
+			}
+		}
+	}(conn)
+
+	msg, err := loadMessage()
+	if err == nil {
+		log.Println(rollrenderer.RenderMessage(&msg))
+		conn.WriteJSON(rollrenderer.RenderMessage(&msg))
+	}
+
+	var messageChannel = make(chan *rollrenderer.BitmapMessage)
+	natsClient.conn.BindRecvChan(natsClient.subject, messageChannel)
+
+	for {
+		message := <-messageChannel
+		log.Println(message)
+		if err := conn.WriteJSON(message); err != nil {
+			return
+		}
+	}
+}
+
 func main() {
 	var token = flag.String("telegram-token", "", "Telegram Token")
-	var natsUrl = flag.String("nats-url", nats.DefaultURL, "NATS URL")
-	var natsPublishSubject = flag.String(
-		"nats-pub-subject",
-		"heiafr.telecomtower.bot",
-		"NATS Publish Subject")
-	var natsQuerySubject = flag.String(
-		"nats-query-subject",
-		"heiafr.telecomtower.bot.query",
-		"NATS Query Subject")
+	var natsURL = flag.String("nats-url", nats.DefaultURL, "NATS URL")
+	var natsSubject = flag.String("nats-subject", "telecom-tower", "NATS Subject")
+	var dbName = flag.String("database", "./database.bolt", "Bolt database name")
 
 	iniflags.Parse()
 
+	if err := openDB(*dbName); err != nil {
+		log.Fatal(err)
+	}
+
 	var err error
+	openNats(*natsURL, *natsSubject)
+
 	bot, err = telebot.NewBot(*token)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	messages := make(chan telebot.Message)
-	bot.Listen(messages, longPollTime)
+	go processTelegramMessages(bot)
 
-	natsGw.init(*natsUrl, *natsPublishSubject, *natsQuerySubject)
+	r := mux.NewRouter()
+	r.HandleFunc("/", home)
+	r.HandleFunc("/stream", stream)
 
-	for message := range messages {
-		key := fmt.Sprintf("%x:%x", message.Chat.ID, message.Sender.ID)
-		currentSession, ok := sessions[key]
-		if !ok {
-			currentSession = new(session)
-			currentSession.state = idleState
-			currentSession.conversation = message.Chat
-			currentSession.sender = message.Sender
-			sessions[key] = currentSession
-		}
-		currentSession.message = message
-		currentSession.state(currentSession)
-	}
+	r.PathPrefix("/static/").Handler(
+		http.StripPrefix(
+			"/static/", http.FileServer(http.Dir("./static/"))))
+
+	http.Handle("/", r)
+	http.ListenAndServe(":8100", nil)
 
 }

@@ -23,6 +23,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/heia-fr/telecom-tower/rollrenderer"
 	"github.com/tucnak/telebot"
 	"log"
 	"strings"
@@ -38,6 +39,32 @@ const (
 var lastMessage string = "(no message)"
 
 type stateFn func(*session)
+
+// This is the main loop fror processing Telegram messages
+func processTelegramMessages(bot *telebot.Bot) {
+	messages := make(chan telebot.Message)
+	bot.Listen(messages, longPollTime)
+
+	for message := range messages {
+		key := fmt.Sprintf("%x:%x", message.Chat.ID, message.Sender.ID)
+		currentSession, ok := sessions[key]
+		if !ok {
+			currentSession = new(session)
+			currentSession.state = idleState
+			currentSession.conversation = message.Chat
+			currentSession.sender = message.Sender
+			sessions[key] = currentSession
+		}
+		currentSession.message = message
+		currentSession.state(currentSession)
+	}
+}
+
+//***************************************************************************
+//
+// States
+//
+//***************************************************************************
 
 func idleState(s *session) {
 	if s.message.Text == printCommand || s.message.Text == anonymousPrintCommand {
@@ -72,6 +99,7 @@ func checkTextState(s *session) {
 		return
 	}
 	if len(s.message.Text) <= maxMsgLen {
+		// Write log entry
 		log.Printf(
 			"%s %s (%s/%d) says : \"%s\" in %s",
 			s.sender.FirstName, s.sender.LastName, s.sender.Username, s.sender.ID,
@@ -88,7 +116,34 @@ func checkTextState(s *session) {
 			}
 		}
 		s.sayGoodText()
-		natsGw.publishMessage(s)
+
+		msg := rollrenderer.TextMessage{
+			Introduction: []rollrenderer.Line{
+				rollrenderer.Line{Text: "", Font: 6, Color: "#000000"}},
+			Conclusion: []rollrenderer.Line{
+				rollrenderer.Line{Text: " // ", Font: 6, Color: "#0000FF"}},
+			Separator: []rollrenderer.Line{rollrenderer.Line{
+				Text: "  --  ", Font: 6, Color: "#FFFFFF"}},
+		}
+
+		if s.anonymous {
+			msg.Body = []rollrenderer.Line{
+				rollrenderer.Line{Text: s.message.Text, Font: 6, Color: s.color},
+			}
+		} else {
+			msg.Body = []rollrenderer.Line{
+				rollrenderer.Line{
+					Text: fmt.Sprintf("%s says: ", s.sender.FirstName),
+					Font: 6, Color: "#FFFFFF"},
+				rollrenderer.Line{
+					Text: s.message.Text, Font: 6, Color: s.color},
+			}
+		}
+
+		saveMessage(msg)
+		bitmap := rollrenderer.RenderMessage(&msg)
+		natsClient.conn.Publish(natsClient.subject, &bitmap)
+
 		s.state = idleState
 	} else {
 		s.sayTooLongText()
