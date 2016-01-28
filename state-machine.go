@@ -105,14 +105,16 @@ func checkTextState(s *session) {
 			s.sender.FirstName, s.sender.LastName, s.sender.Username, s.sender.ID,
 			s.message.Text, s.color)
 		lastMessage = fmt.Sprintf("%s says : \"%s\"", s.sender.FirstName, s.message.Text)
-		// Send a notification to channels
-		for _, username := range notificationChannels {
-			err := bot.SendMessage(
-				telebot.Chat{Type: "channel", Username: username},
-				fmt.Sprintf("%s says : \"%s\"", s.sender.FirstName, s.message.Text),
-				nil)
-			if err != nil {
-				log.Errorf("Error sending notification: %s", err)
+		if !*silent {
+			// Send a notification to channels
+			for _, username := range notificationChannels {
+				err := bot.SendMessage(
+					telebot.Chat{Type: "channel", Username: username},
+					fmt.Sprintf("%s says : \"%s\"", s.sender.FirstName, s.message.Text),
+					nil)
+				if err != nil {
+					log.Errorf("Error sending notification: %s", err)
+				}
 			}
 		}
 		s.sayGoodText()

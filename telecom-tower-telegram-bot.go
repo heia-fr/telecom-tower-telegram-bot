@@ -134,8 +134,11 @@ mainLoop:
 	log.Debugln("End of streaming")
 }
 
+var silent *bool
+
 func main() {
 	var debug = flag.Bool("debug", false, "Debug mode")
+	silent = flag.Bool("silent", false, "Silent")
 	var token = flag.String("telegram-token", "", "Telegram Token")
 	var natsURL = flag.String("nats-url", nats.DefaultURL, "NATS URL")
 	var natsSubject = flag.String("nats-subject", "telecom-tower", "NATS Subject")
