@@ -109,11 +109,13 @@ func stream(w http.ResponseWriter, r *http.Request) {
 
 	for {
 		message := <-messageChannel
-		log.Println(message)
+		log.Println("Sending message")
 		if err := conn.WriteJSON(message); err != nil {
-			return
+			log.Println(err)
+			break
 		}
 	}
+	log.Println("Done.")
 }
 
 func main() {
