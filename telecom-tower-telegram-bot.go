@@ -39,16 +39,16 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/heia-fr/telecom-tower/rollrenderer"
 	"github.com/nats-io/nats"
 	"github.com/tucnak/telebot"
 	"github.com/vharitonsky/iniflags"
-	"io"
-	"log"
 	"net/http"
-	"os"
+	"strings"
 	"time"
 )
 
@@ -63,17 +63,14 @@ type session struct {
 
 const (
 	longPollTime = 300 * time.Second
+	pingPeriod   = 30 * time.Second
 )
 
+// the bot will send notifications to these channels
 var notificationChannels = [...]string{"telecom_tower_notifications"}
 
 var bot *telebot.Bot
 var sessions = make(map[string]*session) // the key is the telegram chat ID and the user ID
-
-func home(w http.ResponseWriter, r *http.Request) {
-	f, _ := os.Open("./html/index.html")
-	io.Copy(w, f)
-}
 
 func stream(w http.ResponseWriter, r *http.Request) {
 	var upgrader = websocket.Upgrader{
@@ -82,73 +79,101 @@ func stream(w http.ResponseWriter, r *http.Request) {
 		CheckOrigin:     func(r *http.Request) bool { return true },
 	}
 
+	log.Debugln("Start streaming")
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println(err)
+		log.Errorf("Error upgrading connection: %s", err)
 		return
 	}
+
+	defer conn.Close()
 
 	// readloop, just ignore all incoming websocket messages
 	go func(c *websocket.Conn) {
 		for {
 			if _, _, err := c.NextReader(); err != nil {
+				log.Errorf("Read error: %s. Closing", err)
 				c.Close()
 				break
 			}
 		}
 	}(conn)
 
-	msg, err := loadMessage()
-	if err == nil {
-		log.Println(rollrenderer.RenderMessage(&msg))
-		conn.WriteJSON(rollrenderer.RenderMessage(&msg))
+	if strings.ToLower(r.FormValue("skip")) == "true" {
+		msg, err := loadMessage()
+		if err == nil {
+			log.Debugln("Sending initial message")
+			conn.WriteJSON(rollrenderer.RenderMessage(&msg))
+		}
 	}
 
 	var messageChannel = make(chan *rollrenderer.BitmapMessage)
 	natsClient.conn.BindRecvChan(natsClient.subject, messageChannel)
 
+	ticker := time.NewTicker(pingPeriod)
+	defer ticker.Stop()
+
+mainLoop:
 	for {
-		message := <-messageChannel
-		log.Println("Sending message")
-		if err := conn.WriteJSON(message); err != nil {
-			log.Println(err)
-			break
+		select {
+		case message := <-messageChannel:
+			log.Debugln("Sending message")
+			if err := conn.WriteJSON(message); err != nil {
+				log.Errorf("Error encoding message: %s", err)
+				break mainLoop
+			}
+		case <-ticker.C:
+			log.Debugln("Ping")
+			if err := conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+				log.Errorf("Error sending ping: %s", err)
+				break mainLoop
+			}
 		}
 	}
-	log.Println("Done.")
+
+	log.Debugln("End of streaming")
 }
 
 func main() {
+	var debug = flag.Bool("debug", false, "Debug mode")
 	var token = flag.String("telegram-token", "", "Telegram Token")
 	var natsURL = flag.String("nats-url", nats.DefaultURL, "NATS URL")
 	var natsSubject = flag.String("nats-subject", "telecom-tower", "NATS Subject")
 	var dbName = flag.String("database", "./database.bolt", "Bolt database name")
+	var httpPort = flag.String("port", "8100", "Server port")
 
 	iniflags.Parse()
 
+	if *debug {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
+
+	log.Infoln("Starting Telegram bot")
 	if err := openDB(*dbName); err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error opening Bolt database: %s", err)
 	}
 
 	var err error
-	openNats(*natsURL, *natsSubject)
+	if err := openNats(*natsURL, *natsSubject); err != nil {
+		log.Fatalf("Error connecting to NATS server: %s", err)
+
+	}
 
 	bot, err = telebot.NewBot(*token)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error creating bot: %s", err)
 	}
 
 	go processTelegramMessages(bot)
 
 	r := mux.NewRouter()
-	r.HandleFunc("/", home)
 	r.HandleFunc("/stream", stream)
-
-	r.PathPrefix("/static/").Handler(
-		http.StripPrefix(
-			"/static/", http.FileServer(http.Dir("./static/"))))
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./html/")))
 
 	http.Handle("/", r)
-	http.ListenAndServe(":8100", nil)
+	http.ListenAndServe(fmt.Sprintf(":%s", *httpPort), nil)
 
+	log.Infoln("Terminated.")
 }

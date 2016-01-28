@@ -15,7 +15,6 @@
 package main
 
 import (
-	_ "fmt"
 	"github.com/nats-io/nats"
 )
 
@@ -24,10 +23,14 @@ var natsClient struct {
 	subject string
 }
 
-func openNats(url string, subject string) {
-	nc, _ := nats.Connect(url)
+func openNats(url string, subject string) error {
+	nc, err := nats.Connect(url)
+	if err != nil {
+		return err
+	}
 	natsClient.conn, _ = nats.NewEncodedConn(nc, nats.JSON_ENCODER)
 	natsClient.subject = subject
+	return nil
 }
 
 func closeNats() {

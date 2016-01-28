@@ -23,9 +23,9 @@ package main
 
 import (
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"github.com/heia-fr/telecom-tower/rollrenderer"
 	"github.com/tucnak/telebot"
-	"log"
 	"strings"
 )
 
@@ -100,7 +100,7 @@ func checkTextState(s *session) {
 	}
 	if len(s.message.Text) <= maxMsgLen {
 		// Write log entry
-		log.Printf(
+		log.Infof(
 			"%s %s (%s/%d) says : \"%s\" in %s",
 			s.sender.FirstName, s.sender.LastName, s.sender.Username, s.sender.ID,
 			s.message.Text, s.color)
@@ -112,7 +112,7 @@ func checkTextState(s *session) {
 				fmt.Sprintf("%s says : \"%s\"", s.sender.FirstName, s.message.Text),
 				nil)
 			if err != nil {
-				log.Printf("Error sending notification: %s\n", err)
+				log.Errorf("Error sending notification: %s", err)
 			}
 		}
 		s.sayGoodText()

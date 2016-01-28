@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/boltdb/bolt"
 	"github.com/heia-fr/telecom-tower/rollrenderer"
-	"log"
 )
 
 var store struct {
@@ -13,7 +12,6 @@ var store struct {
 }
 
 func openDB(name string) error {
-	log.Println(name)
 	db, err := bolt.Open(name, 0600, nil)
 	if err != nil {
 		return err
