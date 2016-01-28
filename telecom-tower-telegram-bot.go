@@ -99,7 +99,7 @@ func stream(w http.ResponseWriter, r *http.Request) {
 		}
 	}(conn)
 
-	if strings.ToLower(r.FormValue("skip")) == "true" {
+	if strings.ToLower(r.FormValue("skip")) != "true" {
 		msg, err := loadMessage()
 		if err == nil {
 			log.Debugln("Sending initial message")
