@@ -5,15 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Telecom Tower</title>
     <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/pure-min.css">
+    <!--[if lte IE 8]>
+    <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/grids-responsive-old-ie-min.css">
+    <![endif]-->
+    <!--[if gt IE 8]><!-->
+    <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/grids-responsive-min.css">
+    <!--<![endif]-->
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:regular,bold,italic,thin,light,bolditalic,black,medium&amp;lang=en">
   </head>
   <body>
-    <div class="content">
-      <h1>Telecom Tower</h1>
-      <canvas id="towerCanvas" style="border:1px solid #d3d3d3;">
-      Your browser does not support the HTML5 canvas tag.</canvas>
+    <div class="pure-g">
+      <div class="pure-u-1">
+        <div>
+          <canvas class="tower-leds" id="towerCanvas">
+            Your browser does not support the HTML5 canvas tag.</canvas>
+        </div>
+        <div class="tower-pic">
+          <img class="pure-img" src="static/img/tower.jpg">
+        </div>
+        <footer>
+          <div class="copyright">Copyright &copy; 2016 Jacques Supcik, filière télécommunications</div>
+          <div><img class="logo" src="/static/img/logo_heiafr_white.png"></div>
+        </footer>
+      </div>
     </div>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+    <script src="/static/js/reconnecting-websocket.min.js"></script>
     <script src="/static/js/tower.js"></script>
     <script>
       $( document ).ready(function() { 

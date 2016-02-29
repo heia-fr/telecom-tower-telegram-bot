@@ -82,7 +82,7 @@ var tower = {
 
 }
 
-var towerSocket = new WebSocket("ws://localhost:8100/stream");
+var towerSocket = new ReconnectingWebSocket("ws://telecom-tower.tk/stream");
 
 towerSocket.onmessage = function (event) {
   tower.msgStack.push(JSON.parse(event.data))

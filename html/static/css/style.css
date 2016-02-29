@@ -1,4 +1,51 @@
-.content {
-	margin-left: 10px;
-	margin-right: 10px;
+body {
+	background-image: url("/static/img/bg.jpg");
+	background-repeat: repeat;
+}
+
+html, button, input, select, textarea,
+.pure-g [class *= "pure-u"] {
+	font-family: 'Roboto', 'Helvetica', sans-serif;
+}
+
+.tower-leds {
+    display: block;
+    width: 95%;
+    max-width: 645px;
+    margin-top: 20px;
+    margin-left: auto;
+    margin-right: auto;
+    border:2px solid #d3d3d3;
+}
+
+.tower-pic {
+    width: 30%;
+    max-width: 300px;
+    display: block;
+    padding-top: 20px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+footer {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 95px;
+    width: 100%;
+    background-color: #333333;
+    font-weight: bold;
+    color: white;
+    text-align: center;
+}
+
+footer
+
+.copyright {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.logo {
+    width: 300px;
 }
