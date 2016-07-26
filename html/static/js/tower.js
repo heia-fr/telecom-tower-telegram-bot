@@ -21,7 +21,7 @@ var tower = {
     ctx.fillStyle="#333333";
     ctx.fill();
 
-    for (var y=0; y < this.rows; y++) {
+     for (var y=0; y < this.rows; y++) {
       for (var x=0; x < this.columns; x++) {
         ctx.beginPath();
         ctx.arc(
@@ -45,8 +45,8 @@ var tower = {
           (this.sep + 2 * this.radius) * x + this.margin + this.radius,
           (this.sep + 2 * this.radius) * y + this.margin + this.radius,
           this.radius, 0, 2*Math.PI);
-        var rgb = data[x*this.rows + y]
-        ctx.fillStyle = '#' + (0x1000000 + rgb).toString(16).slice(1)
+        var rgb = data[x*this.rows + y];
+        ctx.fillStyle = '#' + (0x1000000 + rgb).toString(16).slice(1);
         ctx.fill();     
       }
     }
@@ -80,13 +80,17 @@ var tower = {
     }
   }
 
+};
+
+function tower_start() {
+  tower.init();
+  var config = {
+    databaseURL: "https://telecom-tower.firebaseio.com"
+  };
+  firebase.initializeApp(config);
+  firebase.database().ref('currentBitmap').on('value', function(snapshot) {
+    tower.msgStack.push(snapshot.val());
+  });
+
+  setInterval(function(){tower.roll();}, 33);
 }
-
-var towerSocket = new ReconnectingWebSocket("wss://telecom-tower.tk/stream");
-
-towerSocket.onmessage = function (event) {
-  tower.msgStack.push(JSON.parse(event.data))
-}
-
-setInterval(function(){tower.roll();}, 33);
-

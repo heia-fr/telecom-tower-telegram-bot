@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // 2015-12-29 | JS | First version
-// 2016-01-12 | JS | Last change
+// 2016-07-26 | JS | Last change
 
 //
 // Telegram bot
@@ -24,7 +24,6 @@ package main
 import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
-	"github.com/heia-fr/telecom-tower/rollrenderer"
 	"github.com/tucnak/telebot"
 	"strings"
 )
@@ -119,32 +118,11 @@ func checkTextState(s *session) {
 		}
 		s.sayGoodText()
 
-		msg := rollrenderer.TextMessage{
-			Introduction: []rollrenderer.Line{
-				rollrenderer.Line{Text: "", Font: 6, Color: "#000000"}},
-			Conclusion: []rollrenderer.Line{
-				rollrenderer.Line{Text: " // ", Font: 6, Color: "#0000FF"}},
-			Separator: []rollrenderer.Line{rollrenderer.Line{
-				Text: "  --  ", Font: 6, Color: "#FFFFFF"}},
-		}
-
-		if s.anonymous {
-			msg.Body = []rollrenderer.Line{
-				rollrenderer.Line{Text: s.message.Text, Font: 6, Color: s.color},
-			}
+		if (s.anonymous) {
+			dispatchMessage("", s.message.Text, s.color)
 		} else {
-			msg.Body = []rollrenderer.Line{
-				rollrenderer.Line{
-					Text: fmt.Sprintf("%s says: ", s.sender.FirstName),
-					Font: 6, Color: "#FFFFFF"},
-				rollrenderer.Line{
-					Text: s.message.Text, Font: 6, Color: s.color},
-			}
+			dispatchMessage(s.sender.FirstName, s.message.Text, s.color)
 		}
-
-		saveMessage(msg)
-		bitmap := rollrenderer.RenderMessage(&msg)
-		natsClient.conn.Publish(natsClient.subject, &bitmap)
 
 		s.state = idleState
 	} else {

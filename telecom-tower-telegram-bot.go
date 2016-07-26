@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // 2015-12-29 | JS | First version
-// 2016-01-12 | JS | Last edit
+// 2016-07-26 | JS | Add Firebase Database
 
 // Infos for BotFather
 /*
@@ -38,6 +38,7 @@ By Jacques Supcik - Haute école d'ingénierie et d'architecture Fribourg - Fili
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
@@ -47,6 +48,7 @@ import (
 	"github.com/nats-io/nats"
 	"github.com/tucnak/telebot"
 	"github.com/vharitonsky/iniflags"
+	"github.com/zabawaba99/firego"
 	"net/http"
 	"strings"
 	"time"
@@ -64,6 +66,8 @@ type session struct {
 const (
 	longPollTime = 300 * time.Second
 	pingPeriod   = 30 * time.Second
+	maxMsgLen    = 64 // The tower can show up to 21 characters (using 6x8 font).
+	maxSenderLen = 32 // The tower can show up to 21 characters (using 6x8 font).
 )
 
 // the bot will send notifications to these channels
@@ -71,6 +75,75 @@ var notificationChannels = [...]string{"telecom_tower_notifications"}
 
 var bot *telebot.Bot
 var sessions = make(map[string]*session) // the key is the telegram chat ID and the user ID
+var fbase *firego.Firebase
+
+func dispatchMessage(sender, text, color string) {
+	msg := rollrenderer.TextMessage{
+		Introduction: []rollrenderer.Line{
+			{Text: "", Font: 6, Color: "#000000"}},
+		Conclusion: []rollrenderer.Line{
+			{Text: " // ", Font: 6, Color: "#0000FF"}},
+		Separator: []rollrenderer.Line{{
+			Text: "  --  ", Font: 6, Color: "#FFFFFF"}},
+	}
+
+	if sender == "" {
+		msg.Body = []rollrenderer.Line{
+			{Text: text, Font: 6, Color: color},
+		}
+	} else {
+		msg.Body = []rollrenderer.Line{
+			{
+				Text: fmt.Sprintf("%s says: ", sender),
+				Font: 6, Color: "#FFFFFF"},
+			{
+				Text: text, Font: 6, Color: color},
+		}
+	}
+
+	saveMessage(msg)
+	bitmap := rollrenderer.RenderMessage(&msg)
+
+	fbaseData := make(map[string]interface{})
+
+	fbaseData["currentMessage"] = msg
+	fbaseData["currentBitmap"] = bitmap
+	fbaseData["Coucou"] = "C'est nous."
+
+
+	if err := fbase.Set(fbaseData); err != nil {
+		log.Info(err)
+	}
+
+	natsClient.conn.Publish(natsClient.subject, &bitmap)
+}
+
+func publish(w http.ResponseWriter, r *http.Request) {
+	var msg struct {
+		Sender  string `json:"sender"`
+		Message string `json:"message"`
+		Color   string `json:"color"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&msg)
+	if err != nil {
+		http.Error(w, err.Error(), 403)
+		return
+	}
+	if len(msg.Sender) > maxSenderLen {
+		http.Error(w, "Sender too long", 403)
+		return
+	}
+	if len(msg.Message) > maxMsgLen {
+		http.Error(w, "Message too long", 403)
+		return
+	}
+	color, ok := colorNames[strings.ToLower(msg.Color)]
+	if !ok {
+		http.Error(w, "Invalid color", 403)
+		return
+	}
+	dispatchMessage(msg.Sender, msg.Message, color)
+}
 
 func stream(w http.ResponseWriter, r *http.Request) {
 	var upgrader = websocket.Upgrader{
@@ -144,6 +217,8 @@ func main() {
 	var natsSubject = flag.String("nats-subject", "telecom-tower", "NATS Subject")
 	var dbName = flag.String("database", "./database.bolt", "Bolt database name")
 	var httpPort = flag.String("port", "8100", "Server port")
+	var fireBaseURL = flag.String("firebase-url", "https://telecom-tower.firebaseio.com", "Firebase URL")
+	var fireBaseToken = flag.String("firebase-token", "", "Firebase Token")
 
 	iniflags.Parse()
 
@@ -164,6 +239,10 @@ func main() {
 
 	}
 
+	// Connect to Firebase Database
+	fbase = firego.New(*fireBaseURL, nil)
+	fbase.Auth(*fireBaseToken)
+
 	bot, err = telebot.NewBot(*token)
 	if err != nil {
 		log.Fatalf("Error creating bot: %s", err)
@@ -173,6 +252,7 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/stream", stream)
+	r.HandleFunc("/publish", publish).Methods("POST")
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./html/")))
 
 	http.Handle("/", r)

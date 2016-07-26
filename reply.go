@@ -26,10 +26,6 @@ import (
 	"github.com/tucnak/telebot"
 )
 
-const (
-	maxMsgLen = 64 // The tower can show up to 21 characters (using 6x8 font).
-)
-
 var colorKeyboard = telebot.SendOptions{
 	ReplyMarkup: telebot.ReplyMarkup{
 		CustomKeyboard: [][]string{
