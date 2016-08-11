@@ -48,7 +48,7 @@ import (
 	"github.com/nats-io/nats"
 	"github.com/tucnak/telebot"
 	"github.com/vharitonsky/iniflags"
-	"github.com/zabawaba99/firego"
+	"github.com/BlueMasters/firebasedb"
 	"net/http"
 	"strings"
 	"time"
@@ -75,7 +75,7 @@ var notificationChannels = [...]string{"telecom_tower_notifications"}
 
 var bot *telebot.Bot
 var sessions = make(map[string]*session) // the key is the telegram chat ID and the user ID
-var fbase *firego.Firebase
+var fbase firebasedb.Reference
 
 func dispatchMessage(sender, text, color string) {
 	msg := rollrenderer.TextMessage{
@@ -104,14 +104,11 @@ func dispatchMessage(sender, text, color string) {
 	saveMessage(msg)
 	bitmap := rollrenderer.RenderMessage(&msg)
 
-	fbaseData := make(map[string]interface{})
+	if err := fbase.Ref("currentMessage").Set(&msg); err != nil {
+		log.Info(err)
+	}
 
-	fbaseData["currentMessage"] = msg
-	fbaseData["currentBitmap"] = bitmap
-	fbaseData["Coucou"] = "C'est nous."
-
-
-	if err := fbase.Set(fbaseData); err != nil {
+	if err := fbase.Ref("currentBitmap").Set(&bitmap); err != nil {
 		log.Info(err)
 	}
 
@@ -240,8 +237,11 @@ func main() {
 	}
 
 	// Connect to Firebase Database
-	fbase = firego.New(*fireBaseURL, nil)
-	fbase.Auth(*fireBaseToken)
+	fbase, err = firebasedb.NewFirebaseDB(*fireBaseURL)
+	if err != nil {
+		log.Fatalf("Error opening firebase: %s", err)
+	}
+	fbase = fbase.Auth(*fireBaseToken)
 
 	bot, err = telebot.NewBot(*token)
 	if err != nil {

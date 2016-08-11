@@ -1,6 +1,23 @@
 language: go
-notifications:
-  email:
-    recipients: jacques@supcik.net
-    on_success: change
-    on_failure: always
+
+go:
+- 1.6
+
+install:
+- go get ./...
+- go build
+
+script:
+- file telecom-tower-telegram-bot
+- true
+
+deploy:
+  provider: releases
+  api_key:
+    secure: HFrfvOaH8FU91LXYN1/ocn42pt/Bvsbzt+EQXhZ7Kg9mF+9eN3p+91+5GgxeEJNvVamO8g5trJzI/E0rToPye0/5PTK3RoVz6lBREsOP6tzSqjMMhyYLoFQ2eUcKt9yelZfILdLr8OmVRpHIx139Owz694ndNwzY48iJHqnUDVDKONuax9HbMkLIymgzYXga92UVTqGOcCLpvcE9Nk1KhE4FV8aVa8493wzYc/oF3w2vtvSx4FY5tWvqq42VL0tlxf2gbK9dFsF1nk9yPKaaIhxmaKIBFlylLAA5jvpOEtI++xR2orXv8C3UvQK6d9nJmuba3L1WKuk0wmNu8y2eMO5MPIBYugDvD4hsGEz3rRrcJoGzBYp61KqDFoSS6736pPFm3pRMwsi3ZI7/FHy+VQZKPcOc1MChcQ7bv03TRc1dKcaiOudpFJc2fI3Nd1AUCr6tvBKeJi3Y+YNDMrQHMJkF63x094Zi2cQOci1vXKetdXyAU1LFBn/SmQwlJRBVSShikYZh1ChxeHyk3IbHvD+mg6Dhf+mAxFw8qKfeQtamjgtzZsGTas3wNRdE+K0jFBWO4Ox3DV7wkEb5oSeJhHP3DhjWxDmasPxBEB8kJp0jz+0j8AQIciaXY8iBP0/+kw6xBxqcTDR+w9QGZGCD9CjX3euYi7xcSBxibQ7O5HA=
+  file: telecom-tower-telegram-bot
+  skip_cleanup: true
+  overwrite: true
+  on:
+    repo: heia-fr/telecom-tower-telegram-bot
+    tags: true
