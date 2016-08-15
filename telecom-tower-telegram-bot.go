@@ -237,11 +237,11 @@ func main() {
 	}
 
 	// Connect to Firebase Database
-	fbase, err = firebasedb.NewFirebaseDB(*fireBaseURL)
-	if err != nil {
+	fbase = firebasedb.NewReference(*fireBaseURL)
+	if fbase.Error != nil {
 		log.Fatalf("Error opening firebase: %s", err)
 	}
-	fbase = fbase.Auth(*fireBaseToken)
+	fbase = fbase.Auth(firebasedb.Secret{Token:*fireBaseToken})
 
 	bot, err = telebot.NewBot(*token)
 	if err != nil {
